@@ -1,0 +1,23 @@
+# Ignore model directories
+cardiffnlp/twitter-roberta-base-sentiment/
+
+# Python cache and artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# Environment files
+.env
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db 
