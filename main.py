@@ -27,14 +27,13 @@ import urllib.request
 import os
 import shutil
 
-
-
 # Check if the model directory exists
 MODEL_DIR = "cardiffnlp/twitter-roberta-base-sentiment"
 if os.path.exists(MODEL_DIR):
     print(f"Model directory '{MODEL_DIR}' exists. Deleting it...")
     shutil.rmtree(MODEL_DIR)
-    print(f"Deleted '{MODEL_DIR}'")
+    print(f"Deleted '{MODEL_DIR}'. Exiting.")
+    exit()
 
 # Tasks:
 
@@ -79,5 +78,3 @@ choice, confidence = classify_text_choice(text)
 print(f"Text: '{text}'")
 print(f"Classification: {choice}")
 print(f"Confidence: {np.round(confidence, 4)}")
-
-
