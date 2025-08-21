@@ -2,16 +2,16 @@
 # memory_merchant_static.py
 # Static CLI version of the Memory Merchant scene (no backend calls, no AI replies).
 # Behavior:
-# - Press Enter to advance to the next dialogue line.
-# - When a line contains multiple numbered choices (e.g. "1. ... 2. ..."), that whole line
-#   is shown at once and the script asks you to type the number of your choice.
+# - Auto-advance through dialogue lines without requiring Enter presses.
+# - When a line contains multiple numbered choices (e.g. "1. ... 2. ..."), display each choice
+#   on a separate line vertically and ask user to type the number of their choice.
 # - The dialogue text is included exactly as provided by the user and is not altered,
-#   except blank lines are skipped so you don't have to press Enter twice.
-# - After you choose, the chosen option is displayed and the script advances immediately
-#   (the numeric choice acts as the Enter) — only for choice lines.
+#   except blank lines are skipped.
+# - After you choose, the chosen option is displayed and the script advances immediately.
 
 import sys
 import re
+import time
 
 SCRIPT = """
 M: Finally awake, huh?
@@ -336,10 +336,12 @@ Narration: at that moment you realized, it did really happen, you were trapped i
 GAME OVER.
 """.splitlines()
 
+
 # Determine which lines are "choice blocks". Rule: if a single line contains at least two numbered options like "1." and "2.", treat it as a choice block.
 def is_choice_block(line):
     # True if the line has both "1." and "2." or generally multiple numbered options on same line
     return bool(re.search(r"\b1\.", line)) and bool(re.search(r"\b2\.", line))
+
 
 def parse_choices(line):
     """
@@ -347,40 +349,60 @@ def parse_choices(line):
     Returns list of tuples (num_str, text).
     Example: "P: 1. Say nothing 2. Who are you?" -> [("1","Say nothing"),("2","Who are you?")]
     """
-    pattern = re.compile(r'(\d+)\.\s*(.*?)(?=(?:\s+\d+\.|$))')
+    pattern = re.compile(r"(\d+)\.\s*(.*?)(?=(?:\s+\d+\.|$))")
     return pattern.findall(line)
 
-def prompt_enter():
+
+def wait_for_advance():
+    """
+    Wait for user to press Enter (or type something then Enter).
+    """
     try:
-        input("(press Enter to continue) ")
+        input()
     except (EOFError, KeyboardInterrupt):
         print("\nExiting.")
         sys.exit(0)
 
+
+def display_choices_vertically(choices, prefix=""):
+    """
+    Display choices vertically instead of on a single line.
+    """
+    print(prefix)  # Print the prefix (like "P:") if it exists
+    for num, text in choices:
+        print(f"  {num}. {text.strip()}")
+    print()  # Add a blank line after choices
+
+
 def run():
     print("=== MEMORY MERCHANT — STATIC CLI ===")
-    print("(Press Enter to advance. Numbered choice lines will ask for a numeric selection.)\n")
+    print("Press Enter to advance. Vertical choices will ask for numeric selection.\n")
 
     i = 0
     while i < len(SCRIPT):
         line = SCRIPT[i]
 
-        # Skip blank lines entirely so user doesn't have to press Enter for them.
+        # Skip blank lines entirely
         if line.strip() == "":
             i += 1
             continue
 
-        # Print the line exactly as-is
-        print(line)
-
-        # If this line is a choice block (contains multiple numbered options), parse and ask for a choice.
+        # If this line is a choice block (contains multiple numbered options), display vertically
         if is_choice_block(line):
             choices = parse_choices(line)
             if not choices:
-                # fallback: just wait once if parsing failed
-                prompt_enter()
+                # fallback: just print and continue if parsing failed
+                print(line)
+                wait_for_advance()
                 i += 1
                 continue
+
+            # Extract the prefix (everything before the first choice)
+            prefix_match = re.match(r"^(.*?)(?=\s*\d+\.)", line)
+            prefix = prefix_match.group(1).strip() if prefix_match else ""
+
+            # Display choices vertically
+            display_choices_vertically(choices, prefix)
 
             # Build a set of valid numbers (as strings)
             valid_nums = {num for num, _ in choices}
@@ -388,30 +410,38 @@ def run():
             # Prompt until we get a valid selection
             while True:
                 try:
-                    sel = input(f"Choose an option {sorted(valid_nums)} (type the number): ").strip()
+                    sel = input(
+                        f"Choose an option {sorted(valid_nums)} (type the number): "
+                    ).strip()
                 except (EOFError, KeyboardInterrupt):
                     print("\nExiting.")
                     sys.exit(0)
 
                 if sel in valid_nums:
                     # find the chosen text
-                    chosen_text = next((text.strip() for num, text in choices if num == sel), None)
-                    # Display the chosen option (preserve the exact option text from the script fragment)
+                    chosen_text = next(
+                        (text.strip() for num, text in choices if num == sel), None
+                    )
+                    # Display the chosen option
                     print(f"You chose: {sel}. {chosen_text}")
-                    # IMPORTANT: for choice lines, the numeric input immediately counts as the Enter — advance now.
+                    print()  # Add spacing after choice
                     break
                 else:
-                    print("Invalid choice. Please type one of the option numbers shown (e.g. 1, 2...).")
+                    print(
+                        "Invalid choice. Please type one of the option numbers shown (e.g. 1, 2...)."
+                    )
 
-            # Advance without an extra Enter (choice input already advanced).
+            # Advance without an extra pause
             i += 1
             continue
 
-        # Otherwise wait for Enter before showing next line
-        prompt_enter()
+        # Normal narration line - print and wait for Enter
+        print(line)
+        wait_for_advance()
         i += 1
 
     print("\n=== THE END ===")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run()
